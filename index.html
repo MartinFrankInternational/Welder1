@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Weld Loop Hero — Martin Frank International</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #10232b;
+      color: #10232b;
+    }
+
+    body.shake {
+      animation: shake 0.14s linear;
+    }
+
+    @keyframes shake {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(3px, -2px); }
+      50% { transform: translate(-3px, 2px); }
+      75% { transform: translate(2px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 22% 16%, rgba(255,255,255,0.7), transparent 20%),
+        linear-gradient(#c8eefb 0%, #e8f8ff 38%, #8fa0a7 38%, #506069 100%);
+      touch-action: none;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    #bgCanvas { z-index: 1; }
+    #pathCanvas { z-index: 2; }
+    #fxCanvas { z-index: 3; pointer-events: none; }
+
+    .hud {
+      position: absolute;
+      top: calc(max(6px, env(safe-area-inset-top)) + 30px);
+      left: 10px;
+      right: 10px;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 1.45fr 0.85fr 0.85fr;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.94);
+      border: 3px solid #0a4b5d;
+      border-radius: 18px;
+      box-shadow: 0 5px 0 rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+
+    .logoCard {
+      padding: 7px;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logoCard img {
+      width: 100%;
+      max-height: 58px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .stat {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .cap {
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      opacity: 0.7;
+    }
+
+    .val {
+      font-size: 19px;
+      font-weight: 900;
+      margin-top: 4px;
+      white-space: nowrap;
+    }
+
+    .speech {
+      position: absolute;
+      top: calc(max(6px, env(safe-area-inset-top)) + 116px);
+      left: 10px;
+      right: 10px;
+      z-index: 9;
+      background: rgba(255,255,255,0.95);
+      border: 3px solid #0a4b5d;
+      border-radius: 20px;
+      padding: 11px 13px;
+      font-size: 14px;
+      line-height: 1.25;
+      font-weight: 850;
+      box-shadow: 0 5px 0 rgba(0,0,0,0.16);
+      pointer-events: none;
+    }
+
+    .warning {
+      position: absolute;
+      top: 183px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.95);
+      z-index: 12;
+      background: rgba(255,55,55,0.96);
+      color: #fff;
+      border: 3px solid #7e1010;
+      border-radius: 14px;
+      padding: 8px 12px;
+      font-weight: 900;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.1s linear, transform 0.1s linear;
+      pointer-events: none;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+      white-space: nowrap;
+    }
+
+    .warning.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    .bottomPanel {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      z-index: 10;
+      background: rgba(255,255,255,0.95);
+      border: 3px solid #0a4b5d;
+      border-radius: 21px;
+      padding: 11px;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.18);
+      pointer-events: none;
+    }
+
+    .miniGrid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+
+    .mini {
+      background: #eaf8ff;
+      border: 2px solid #24576a;
+      border-radius: 14px;
+      padding: 7px 4px;
+      text-align: center;
+      min-height: 50px;
+    }
+
+    .mini .val {
+      font-size: 16px;
+    }
+
+    .bars {
+      margin-top: 9px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .barTitle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+
+    .bar {
+      height: 17px;
+      border-radius: 999px;
+      border: 3px solid #23343a;
+      background: #d4dde1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .fill {
+      height: 100%;
+      width: 100%;
+      transform-origin: left center;
+      transform: scaleX(1);
+    }
+
+    #healthFill {
+      background: linear-gradient(90deg, #2fd75d, #ffcc29, #ff4646);
+    }
+
+    #heatFill {
+      background: linear-gradient(90deg, #3ab8ff 0 30%, #2fd75d 30% 62%, #ffcc29 62% 78%, #ff4646 78% 100%);
+    }
+
+    #heatNeedle {
+      position: absolute;
+      top: -4px;
+      width: 8px;
+      height: 24px;
+      border-radius: 6px;
+      background: #111;
+      left: 0%;
+      transform: translateX(-4px);
+      box-shadow: 0 0 8px rgba(255,255,255,0.4);
+    }
+
+    .fingerHint {
+      position: absolute;
+      left: 50%;
+      bottom: calc(max(10px, env(safe-area-inset-bottom)) + 132px);
+      transform: translateX(-50%);
+      z-index: 9;
+      background: rgba(13,111,140,0.95);
+      color: white;
+      border: 3px solid #083c4b;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 900;
+      font-size: 13px;
+      box-shadow: 0 5px 0 rgba(0,0,0,0.18);
+      pointer-events: none;
+      animation: pulse 1.3s infinite;
+    }
+
+    .recruitAd {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: auto;
+      z-index: 999;
+      height: 24px;
+      background: linear-gradient(90deg, #062f3b, #0d8caf, #062f3b);
+      color: #fff;
+      border: 0;
+      border-bottom: 2px solid #ffe066;
+      border-radius: 0;
+      padding: 3px 8px 2px;
+      text-align: center;
+      box-shadow: 0 0 12px rgba(255,210,60,0.75);
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .recruitAd::before {
+      content: "";
+      position: absolute;
+      inset: -40px;
+      background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.75) 50%, transparent 65%);
+      animation: shineSweep 2.1s infinite;
+    }
+
+    .adFlash {
+      position: relative;
+      z-index: 1;
+      font-size: 11px;
+      line-height: 14px;
+      font-weight: 1000;
+      letter-spacing: 0.4px;
+      animation: blinkAd 0.75s infinite alternate;
+      text-shadow: 0 0 8px #ffe066;
+      white-space: nowrap;
+    }
+
+    .adSmall {
+      display: none;
+    }
+
+    .applyToast {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      top: calc(max(6px, env(safe-area-inset-top)) + 126px);
+      bottom: auto;
+      z-index: 15;
+      background: rgba(255, 191, 31, 0.96);
+      color: #10232b;
+      border: 3px solid #8a5200;
+      border-radius: 18px;
+      padding: 12px;
+      text-align: center;
+      font-weight: 1000;
+      box-shadow: 0 0 24px rgba(255,191,31,0.8), 0 6px 0 rgba(0,0,0,0.22);
+      pointer-events: none;
+      animation: popToast 0.55s ease-out;
+    }
+
+    @keyframes shineSweep {
+      from { transform: translateX(-120%) rotate(8deg); }
+      to { transform: translateX(120%) rotate(8deg); }
+    }
+
+    @keyframes blinkAd {
+      from { color: #ffffff; transform: scale(1); }
+      to { color: #ffe066; transform: scale(1.025); }
+    }
+
+    @keyframes popToast {
+      0% { opacity: 0; transform: scale(0.85) translateY(-8px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+      50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      background: rgba(8,24,31,0.86);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      touch-action: none;
+    }
+
+    .hidden { display: none; }
+
+    .modal {
+      width: min(470px, 100%);
+      max-height: calc(100dvh - 36px);
+      overflow: auto;
+      background: #fff;
+      border: 4px solid #10232b;
+      border-radius: 25px;
+      padding: 19px;
+      box-shadow: 0 12px 0 rgba(0,0,0,0.35);
+      text-align: center;
+    }
+
+    .modal img {
+      max-width: 230px;
+      width: 85%;
+      max-height: 85px;
+      object-fit: contain;
+      margin-bottom: 8px;
+    }
+
+    .modal h1 {
+      margin: 3px 0 8px;
+      color: #0d6f8c;
+      font-size: 30px;
+    }
+
+    .modal p {
+      font-weight: 700;
+      line-height: 1.36;
+      margin: 8px 0;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 16px;
+      border: 0;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #12a6d0, #0b6d89);
+      color: white;
+      font-size: 20px;
+      font-weight: 900;
+      box-shadow: 0 6px 0 #06475a;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #06475a;
+    }
+
+    @media (max-width: 390px) {
+      .hud { grid-template-columns: 1.25fr 0.82fr 0.82fr; gap: 6px; }
+      .logoCard { min-height: 62px; }
+      .logoCard img { max-height: 49px; }
+      .speech { top: calc(max(8px, env(safe-area-inset-top)) + 78px); font-size: 13px; }
+      .val { font-size: 16px; }
+      .mini .val { font-size: 14px; }
+      .cap { font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="pathCanvas"></canvas>
+    <canvas id="fxCanvas"></canvas>
+
+    <div class="hud">
+      <div class="card logoCard"><img src="mfi-logo.png" alt="Martin Frank International logo" /></div>
+      <div class="card stat"><div class="cap">Score</div><div class="val" id="scoreText">0</div></div>
+      <div class="card stat"><div class="cap">Level</div><div class="val" id="levelText">1/4</div></div>
+    </div>
+
+    <div class="speech" id="speech">Touch anywhere on the game field. Drag the welding torch slowly through the seam like a hot-wire game.</div>
+    <div class="warning" id="warning">CONTACT! SLOW DOWN!</div>
+    <div class="fingerHint" id="fingerHint">DRAG YOUR FINGER ON THE SHIPYARD SEAM</div>
+
+    <div class="recruitAd" id="recruitAd">
+      <div class="adFlash">⚡ WE ARE LOOKING FOR WELDERS IN THE NETHERLANDS ⚡</div>
+      <div class="adSmall">Score 2500+ and unlock the application message</div>
+    </div>
+
+    <div class="applyToast hidden" id="applyToast">
+      🔥 Great score! You should apply at Martin Frank International.
+    </div>
+
+    <div class="bottomPanel">
+      <div class="miniGrid">
+        <div class="mini"><div class="cap">Progress</div><div class="val" id="progressText">0%</div></div>
+        <div class="mini"><div class="cap">Quality</div><div class="val" id="qualityText">100%</div></div>
+        <div class="mini"><div class="cap">Lives</div><div class="val" id="livesText">3</div></div>
+        <div class="mini"><div class="cap">Combo</div><div class="val" id="comboText">x1.0</div></div>
+      </div>
+      <div class="bars">
+        <div>
+          <div class="barTitle"><span>Welding health</span><span id="healthText">100%</span></div>
+          <div class="bar"><div class="fill" id="healthFill"></div></div>
+        </div>
+        <div>
+          <div class="barTitle"><span>Heat / speed</span><span id="heatText">0%</span></div>
+          <div class="bar"><div class="fill" id="heatFill"></div><div id="heatNeedle"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="startOverlay">
+      <div class="modal">
+        <img src="mfi-logo.png" alt="Martin Frank International logo" />
+        <h1>Weld Loop Hero</h1>
+        <p><b>Shipyard Welding Game</b></p>
+        <p>This is not a button game anymore. It is like <b>Heißer Draht / Zenuwspiraal</b>: drag the welding torch through the seam without touching the edge.</p>
+        <p>Move <b>slowly</b>. Stay <b>centered</b>. If you rush or leave the seam, you get massive sparks and lose health.</p>
+        <p>Sound works after you press Start.</p>
+        <button class="btn" id="startBtn">Start Welding</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="endOverlay">
+      <div class="modal">
+        <img src="mfi-logo.png" alt="Martin Frank International logo" />
+        <h1 id="endTitle">Game Over</h1>
+        <p id="endText"></p>
+        <button class="btn" id="shareBtn">Share Final Score</button>
+        <button class="btn" id="restartBtn">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const game = document.getElementById('game');
+    const bgCanvas = document.getElementById('bgCanvas');
+    const pathCanvas = document.getElementById('pathCanvas');
+    const fxCanvas = document.getElementById('fxCanvas');
+    const bg = bgCanvas.getContext('2d');
+    const ctx = pathCanvas.getContext('2d');
+    const fx = fxCanvas.getContext('2d');
+
+    const scoreText = document.getElementById('scoreText');
+    const levelText = document.getElementById('levelText');
+    const progressText = document.getElementById('progressText');
+    const qualityText = document.getElementById('qualityText');
+    const livesText = document.getElementById('livesText');
+    const comboText = document.getElementById('comboText');
+    const healthFill = document.getElementById('healthFill');
+    const heatNeedle = document.getElementById('heatNeedle');
+    const heatText = document.getElementById('heatText');
+    const healthText = document.getElementById('healthText');
+    const speech = document.getElementById('speech');
+    const warning = document.getElementById('warning');
+    const fingerHint = document.getElementById('fingerHint');
+
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const endTitle = document.getElementById('endTitle');
+    const endText = document.getElementById('endText');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const applyToast = document.getElementById('applyToast');
+
+    let W = 0;
+    let H = 0;
+    let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    let running = false;
+    let pointerDown = false;
+    let activePointerId = null;
+    let pointerX = 0;
+    let pointerY = 0;
+    const FINGER_OFFSET_Y = 48; // Torch appears above your finger so your finger does not hide the upcoming seam.
+    let hasTouchedOnce = false;
+
+    let level = 1;
+    const maxLevel = 4;
+    let lives = 3;
+    let score = 0;
+    let combo = 1;
+    let health = 100;
+    let heat = 0;
+    let qualityTotal = 0;
+    let qualitySamples = 0;
+    let progressIndex = 0;
+    let nearestIndex = 0;
+    let path = [];
+
+    const torch = { x: 0, y: 0, px: 0, py: 0, r: 20, speed: 0, angle: 0 };
+    let lastTime = performance.now();
+    let particles = [];
+    let smoke = [];
+    let bgSmoke = [];
+    let bubbles = [];
+    let birds = [];
+    let cranes = [];
+    let forklifts = [];
+    let weldBots = [];
+    let shipLights = [];
+    let seagulls = [];
+    let lostTimer = 0;
+    let sparkCooldown = 0;
+    let applicationUnlocked = false;
+    let lastFinalScoreText = '';
+
+    let audioCtx = null;
+    let weldOsc = null;
+    let weldGain = null;
+    let noiseNode = null;
+    let noiseGain = null;
+    let masterGain = null;
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      for (const c of [bgCanvas, pathCanvas, fxCanvas]) {
+        c.width = Math.floor(W * DPR);
+        c.height = Math.floor(H * DPR);
+        c.style.width = W + 'px';
+        c.style.height = H + 'px';
+      }
+      bg.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      fx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      setupBackgroundObjects();
+      if (running) makeLevel(level);
+    }
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function unlockAudio() {
+      if (audioCtx) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      audioCtx = new AudioContext();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.28;
+      masterGain.connect(audioCtx.destination);
+
+      weldOsc = audioCtx.createOscillator();
+      weldOsc.type = 'sawtooth';
+      weldOsc.frequency.value = 92;
+      weldGain = audioCtx.createGain();
+      weldGain.gain.value = 0;
+      weldOsc.connect(weldGain);
+      weldGain.connect(masterGain);
+      weldOsc.start();
+
+      const bufferSize = 2 * audioCtx.sampleRate;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      noiseNode = audioCtx.createBufferSource();
+      noiseNode.buffer = noiseBuffer;
+      noiseNode.loop = true;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1200;
+      filter.Q.value = 0.8;
+      noiseGain = audioCtx.createGain();
+      noiseGain.gain.value = 0;
+      noiseNode.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(masterGain);
+      noiseNode.start();
+    }
+
+    function setWeldSound(amount, bad) {
+      if (!audioCtx || !weldGain || !noiseGain) return;
+      const now = audioCtx.currentTime;
+      const targetHum = running && pointerDown ? 0.025 + amount * 0.055 : 0;
+      const targetNoise = running && pointerDown ? 0.025 + amount * 0.12 + (bad ? 0.12 : 0) : 0;
+      weldOsc.frequency.setTargetAtTime(bad ? 65 : 88 + amount * 45, now, 0.025);
+      weldGain.gain.setTargetAtTime(targetHum, now, 0.025);
+      noiseGain.gain.setTargetAtTime(targetNoise, now, 0.025);
+    }
+
+    function beep(freq, duration, volume) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.connect(gain);
+      gain.connect(masterGain || audioCtx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.stop(audioCtx.currentTime + duration + 0.02);
+    }
+
+    function setupBackgroundObjects() {
+      bgSmoke = [];
+      bubbles = [];
+      birds = [];
+      forklifts = [];
+      weldBots = [];
+      shipLights = [];
+      seagulls = [];
+      cranes = [
+        { x: W * 0.08, y: H * 0.32, h: H * 0.22, arm: W * 0.28, swing: 0 },
+        { x: W * 0.72, y: H * 0.28, h: H * 0.26, arm: -W * 0.24, swing: 1.7 },
+        { x: W * 0.43, y: H * 0.24, h: H * 0.20, arm: W * 0.20, swing: 3.1 }
+      ];
+      for (let i = 0; i < 12; i++) bgSmoke.push({ x: Math.random() * W, y: H * 0.15 + Math.random() * H * 0.25, r: 16 + Math.random() * 28, vx: 4 + Math.random() * 12, vy: -5 - Math.random() * 10, a: 0.05 + Math.random() * 0.08 });
+      for (let i = 0; i < 18; i++) bubbles.push({ x: Math.random() * W, y: H * 0.78 + Math.random() * H * 0.2, r: 2 + Math.random() * 4, vy: -4 - Math.random() * 10, a: 0.1 + Math.random() * 0.18 });
+      for (let i = 0; i < 5; i++) birds.push({ x: Math.random() * W, y: 35 + Math.random() * 80, vx: 15 + Math.random() * 25, flap: Math.random() * Math.PI * 2 });
+      for (let i = 0; i < 4; i++) seagulls.push({ x: Math.random() * W, y: 70 + Math.random() * 120, vx: 22 + Math.random() * 35, flap: Math.random() * 6.28 });
+      forklifts.push({ x: -80, y: H * 0.66, vx: 28 });
+      forklifts.push({ x: W + 120, y: H * 0.63, vx: -22 });
+      weldBots.push({ x: W * 0.18, y: H * 0.54, blink: 0 });
+      weldBots.push({ x: W * 0.82, y: H * 0.58, blink: 1.2 });
+      for (let i = 0; i < 10; i++) shipLights.push({ x: W * (0.1 + Math.random() * 0.78), y: H * (0.47 + Math.random() * 0.13), phase: Math.random() * 6.28 });
+    }
+
+    function drawRoundRect(g, x, y, w, h, r, fill, stroke) {
+      g.beginPath();
+      g.moveTo(x + r, y);
+      g.arcTo(x + w, y, x + w, y + h, r);
+      g.arcTo(x + w, y + h, x, y + h, r);
+      g.arcTo(x, y + h, x, y, r);
+      g.arcTo(x, y, x + w, y, r);
+      g.closePath();
+      if (fill) g.fill();
+      if (stroke) g.stroke();
+    }
+
+    function drawShipyard(dt) {
+      bg.clearRect(0, 0, W, H);
+      const waterTop = H * 0.72;
+      const deckTop = H * 0.39;
+
+      const skyGrad = bg.createLinearGradient(0, 0, 0, deckTop);
+      skyGrad.addColorStop(0, '#bfeeff');
+      skyGrad.addColorStop(1, '#eefbff');
+      bg.fillStyle = skyGrad;
+      bg.fillRect(0, 0, W, deckTop);
+
+      bg.fillStyle = 'rgba(255,255,255,0.85)';
+      bg.beginPath(); bg.arc(W * 0.78, H * 0.09, 34, 0, Math.PI * 2); bg.fill();
+
+      for (const b of birds) {
+        b.x += b.vx * dt;
+        b.flap += dt * 8;
+        if (b.x > W + 30) b.x = -30;
+        bg.strokeStyle = '#40545c';
+        bg.lineWidth = 2;
+        bg.beginPath();
+        bg.moveTo(b.x - 9, b.y);
+        bg.quadraticCurveTo(b.x, b.y - 5 - Math.sin(b.flap) * 2, b.x + 9, b.y);
+        bg.stroke();
+      }
+
+      for (const g of seagulls) {
+        g.x += g.vx * dt;
+        g.flap += dt * 9;
+        if (g.x > W + 40) g.x = -40;
+        bg.strokeStyle = 'rgba(45,70,80,0.85)';
+        bg.lineWidth = 2;
+        bg.beginPath();
+        bg.moveTo(g.x - 13, g.y);
+        bg.quadraticCurveTo(g.x, g.y - 8 - Math.sin(g.flap) * 4, g.x + 13, g.y);
+        bg.stroke();
+      }
+
+      for (const c of cranes) drawCrane(c);
+
+      for (const s of bgSmoke) {
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        if (s.y < -40 || s.x > W + 50) { s.x = -30; s.y = H * 0.17 + Math.random() * H * 0.25; }
+        bg.fillStyle = `rgba(120,130,135,${s.a})`;
+        bg.beginPath(); bg.arc(s.x, s.y, s.r, 0, Math.PI * 2); bg.fill();
+      }
+
+      // distant ship hull
+      bg.fillStyle = '#344b56';
+      bg.beginPath();
+      bg.moveTo(W * 0.05, deckTop + 50);
+      bg.lineTo(W * 0.9, deckTop + 35);
+      bg.lineTo(W * 0.82, waterTop - 28);
+      bg.lineTo(W * 0.14, waterTop - 18);
+      bg.closePath();
+      bg.fill();
+      bg.strokeStyle = '#1b2d35'; bg.lineWidth = 4; bg.stroke();
+
+      // deck
+      bg.fillStyle = '#7e8c91';
+      bg.fillRect(0, deckTop, W, waterTop - deckTop);
+      bg.fillStyle = '#65747b';
+      for (let y = deckTop + 18; y < waterTop; y += 38) bg.fillRect(0, y, W, 4);
+      bg.strokeStyle = 'rgba(40,50,55,0.6)'; bg.lineWidth = 2;
+      for (let x = -30; x < W; x += 54) { bg.beginPath(); bg.moveTo(x, deckTop); bg.lineTo(x + 80, waterTop); bg.stroke(); }
+
+      for (const light of shipLights) {
+        const pulse = 0.35 + Math.sin(performance.now() * 0.004 + light.phase) * 0.25;
+        bg.fillStyle = `rgba(255,220,90,${pulse})`;
+        bg.beginPath(); bg.arc(light.x, light.y, 3.5, 0, Math.PI * 2); bg.fill();
+      }
+
+      for (const f of forklifts) drawForklift(f, dt);
+      for (const bot of weldBots) drawWeldBot(bot, dt);
+
+      // water
+      const waterGrad = bg.createLinearGradient(0, waterTop, 0, H);
+      waterGrad.addColorStop(0, '#2b6c7b');
+      waterGrad.addColorStop(1, '#123945');
+      bg.fillStyle = waterGrad;
+      bg.fillRect(0, waterTop, W, H - waterTop);
+      bg.strokeStyle = 'rgba(200,245,255,0.25)'; bg.lineWidth = 2;
+      for (let y = waterTop + 16; y < H; y += 25) {
+        bg.beginPath();
+        for (let x = 0; x < W; x += 18) {
+          const yy = y + Math.sin((x + performance.now() * 0.03) * 0.04) * 3;
+          if (x === 0) bg.moveTo(x, yy); else bg.lineTo(x, yy);
+        }
+        bg.stroke();
+      }
+      for (const bub of bubbles) {
+        bub.y += bub.vy * dt;
+        if (bub.y < waterTop) { bub.y = H + Math.random() * 30; bub.x = Math.random() * W; }
+        bg.strokeStyle = `rgba(220,250,255,${bub.a})`; bg.lineWidth = 1;
+        bg.beginPath(); bg.arc(bub.x, bub.y, bub.r, 0, Math.PI * 2); bg.stroke();
+      }
+
+      // welding machine
+      drawWeldingMachine();
+    }
+
+    function drawCrane(c) {
+      bg.save();
+      const time = performance.now() * 0.001;
+      const swing = Math.sin(time + c.swing) * 9;
+      bg.strokeStyle = '#4d5c62';
+      bg.fillStyle = '#718087';
+      bg.lineWidth = 5;
+      bg.beginPath(); bg.moveTo(c.x, c.y); bg.lineTo(c.x, c.y + c.h); bg.stroke();
+      bg.beginPath(); bg.moveTo(c.x, c.y); bg.lineTo(c.x + c.arm, c.y - 25); bg.stroke();
+      bg.lineWidth = 2;
+      for (let i = 0; i < 6; i++) {
+        const t = i / 6;
+        bg.beginPath(); bg.moveTo(c.x + c.arm * t, c.y - 25 * t); bg.lineTo(c.x + c.arm * (t + 0.12), c.y - 25 * (t + 0.12) + 20); bg.stroke();
+      }
+      const hookX = c.x + c.arm * 0.72 + swing;
+      const hookY = c.y - 18;
+      bg.beginPath(); bg.moveTo(hookX, hookY); bg.lineTo(hookX, hookY + 55); bg.stroke();
+      bg.fillStyle = '#2f3d43';
+      bg.fillRect(hookX - 10, hookY + 54, 20, 14);
+      bg.fillStyle = '#ffbf1f';
+      bg.fillRect(hookX - 7, hookY + 58, 14, 5);
+      bg.restore();
+    }
+
+    function drawForklift(f, dt) {
+      f.x += f.vx * dt;
+      if (f.vx > 0 && f.x > W + 120) f.x = -140;
+      if (f.vx < 0 && f.x < -140) f.x = W + 120;
+      bg.save();
+      bg.translate(f.x, f.y);
+      if (f.vx < 0) bg.scale(-1, 1);
+      bg.fillStyle = 'rgba(0,0,0,0.22)'; bg.beginPath(); bg.ellipse(32, 42, 48, 10, 0, 0, Math.PI * 2); bg.fill();
+      bg.fillStyle = '#ffbf1f'; bg.strokeStyle = '#5b3900'; bg.lineWidth = 3;
+      drawRoundRect(bg, 0, 0, 62, 34, 8, true, true);
+      bg.fillStyle = '#26383f'; bg.fillRect(35, -22, 22, 26);
+      bg.strokeStyle = '#26383f'; bg.lineWidth = 4; bg.beginPath(); bg.moveTo(64, -4); bg.lineTo(82, -4); bg.lineTo(82, 30); bg.stroke();
+      bg.strokeStyle = '#111'; bg.lineWidth = 3; bg.beginPath(); bg.moveTo(82, 28); bg.lineTo(108, 28); bg.stroke();
+      bg.fillStyle = '#1b2e35'; bg.beginPath(); bg.arc(14, 35, 8, 0, Math.PI * 2); bg.fill(); bg.beginPath(); bg.arc(50, 35, 8, 0, Math.PI * 2); bg.fill();
+      bg.restore();
+    }
+
+    function drawWeldBot(bot, dt) {
+      bot.blink += dt * 8;
+      bg.save();
+      bg.translate(bot.x, bot.y);
+      bg.fillStyle = 'rgba(0,0,0,0.18)'; bg.beginPath(); bg.ellipse(0, 38, 45, 8, 0, 0, Math.PI * 2); bg.fill();
+      bg.strokeStyle = '#18262c'; bg.lineWidth = 5; bg.lineCap = 'round';
+      bg.beginPath(); bg.moveTo(-22, 20); bg.lineTo(8, -6); bg.lineTo(28, 16); bg.stroke();
+      bg.fillStyle = '#0d6f8c'; bg.strokeStyle = '#083c4b'; bg.lineWidth = 3; drawRoundRect(bg, -36, 18, 72, 30, 10, true, true);
+      bg.fillStyle = Math.sin(bot.blink) > 0 ? '#ffe066' : '#ff7b00';
+      bg.beginPath(); bg.arc(31, 14, 5, 0, Math.PI * 2); bg.fill();
+      if (Math.random() < 0.18) {
+        bg.strokeStyle = 'rgba(255,190,40,0.8)'; bg.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+          bg.beginPath(); bg.moveTo(31, 14); bg.lineTo(31 + Math.random() * 22, 14 + Math.random() * 24 - 12); bg.stroke();
+        }
+      }
+      bg.restore();
+    }
+
+    function drawWeldingMachine() {
+      const x = Math.max(15, W * 0.06);
+      const y = H * 0.60;
+      bg.save();
+      bg.fillStyle = 'rgba(0,0,0,0.25)'; bg.beginPath(); bg.ellipse(x + 55, y + 96, 60, 14, 0, 0, Math.PI * 2); bg.fill();
+      bg.fillStyle = '#0d6f8c'; bg.strokeStyle = '#083c4b'; bg.lineWidth = 4;
+      drawRoundRect(bg, x, y, 105, 95, 15, true, true);
+      bg.fillStyle = '#eaf8ff'; drawRoundRect(bg, x + 12, y + 12, 80, 28, 8, true, false);
+      bg.fillStyle = '#083c4b'; bg.font = '900 9px Arial'; bg.textAlign = 'center'; bg.fillText('MARTIN FRANK', x + 52, y + 24); bg.fillText('WELDER 3000', x + 52, y + 36);
+      bg.fillStyle = '#1b2e35'; bg.beginPath(); bg.arc(x + 26, y + 73, 9, 0, Math.PI * 2); bg.fill(); bg.beginPath(); bg.arc(x + 80, y + 73, 9, 0, Math.PI * 2); bg.fill();
+      bg.strokeStyle = '#111'; bg.lineWidth = 5; bg.beginPath();
+      bg.moveTo(x + 100, y + 55);
+      const endX = torch.x || W * 0.5;
+      const endY = torch.y || H * 0.5;
+      bg.bezierCurveTo(x + 155, y + 70, endX - 110, endY + 120, endX, endY + 28);
+      bg.stroke();
+      bg.restore();
+    }
+
+    function makeLevel(n) {
+      path = [];
+      nearestIndex = 0;
+      progressIndex = 0;
+      health = 100;
+      heat = 0;
+      qualityTotal = 0;
+      qualitySamples = 0;
+      pointerDown = false;
+      activePointerId = null;
+
+      const top = Math.max(245, H * 0.30);
+      const bottom = Math.max(185, H * 0.21);
+      const left = Math.max(58, W * 0.12);
+      const right = W - left;
+      const usable = H - top - bottom;
+      const count = 9 + n * 3;
+      const controls = [];
+
+      for (let i = 0; i < count; i++) {
+        const t = i / (count - 1);
+        let y = top + t * usable;
+        let x;
+        if (i === 0 || i === count - 1) x = W * 0.52;
+        else {
+          const wave1 = Math.sin(t * Math.PI * (2.8 + n * 1.05));
+          const wave2 = Math.sin(t * Math.PI * (5.5 + n * 0.85)) * (0.38 + n * 0.035);
+          const zigzag = Math.sign(Math.sin(t * Math.PI * (3 + n))) * (n > 4 ? 0.18 : 0);
+          x = W * 0.52 + (wave1 + wave2 + zigzag) * W * (0.15 + n * 0.014) + (Math.random() * 2 - 1) * (16 + n * 9);
+          x = clamp(x, left, right);
+        }
+        controls.push({ x, y });
+      }
+
+      for (let i = 0; i < controls.length - 1; i++) {
+        const p0 = controls[Math.max(0, i - 1)];
+        const p1 = controls[i];
+        const p2 = controls[i + 1];
+        const p3 = controls[Math.min(controls.length - 1, i + 2)];
+        for (let j = 0; j < 18; j++) {
+          const t = j / 22;
+          const t2 = t * t;
+          const t3 = t2 * t;
+          const x = 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * t2 + (-p0.x + 3*p1.x - 3*p2.x + p3.x) * t3);
+          const y = 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * t2 + (-p0.y + 3*p1.y - 3*p2.y + p3.y) * t3);
+          path.push({ x, y });
+        }
+      }
+      path.push(controls[controls.length - 1]);
+
+      torch.x = path[0].x;
+      torch.y = path[0].y;
+      torch.px = torch.x;
+      torch.py = torch.y;
+      pointerX = torch.x;
+      pointerY = torch.y + FINGER_OFFSET_Y;
+
+      speech.textContent = `Level ${n}: drag the torch through the shipyard seam. Slow and centered = strong weld.`;
+      updateUI();
+    }
+
+    function nearestToPath(x, y) {
+      let best = Infinity;
+      let idx = nearestIndex;
+      const start = Math.max(0, nearestIndex - 35);
+      const end = Math.min(path.length - 1, nearestIndex + 65);
+      for (let i = start; i <= end; i++) {
+        const p = path[i];
+        const d = dist(x, y, p.x, p.y);
+        if (d < best) { best = d; idx = i; }
+      }
+      if (best > 75) {
+        for (let i = 0; i < path.length; i += 4) {
+          const p = path[i];
+          const d = dist(x, y, p.x, p.y);
+          if (d < best) { best = d; idx = i; }
+        }
+      }
+      nearestIndex = idx;
+      return { d: best, i: idx };
+    }
+
+    function spawnSpark(x, y, amount, bad) {
+      for (let i = 0; i < amount; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = bad ? 120 + Math.random() * 380 : 40 + Math.random() * 140;
+        particles.push({
+          x: x + (Math.random() * 16 - 8),
+          y: y + (Math.random() * 12 - 6),
+          vx: Math.cos(a) * sp + (bad ? (Math.random() * 120 - 60) : 0),
+          vy: Math.sin(a) * sp - (bad ? 70 : 20),
+          life: bad ? 0.42 + Math.random() * 0.38 : 0.22 + Math.random() * 0.22,
+          max: bad ? 0.42 + Math.random() * 0.38 : 0.22 + Math.random() * 0.22,
+          r: bad ? 1.6 + Math.random() * 4.3 : 1 + Math.random() * 2.4,
+          color: Math.random() > 0.15 ? '255,170,30' : '255,255,230'
+        });
+      }
+      if (bad) {
+        for (let i = 0; i < 5; i++) smoke.push({ x: x + Math.random() * 20 - 10, y: y + Math.random() * 10 - 5, vx: Math.random() * 26 - 13, vy: -20 - Math.random() * 25, r: 8 + Math.random() * 16, life: 0.55 + Math.random() * 0.5, max: 0.55 + Math.random() * 0.5 });
+      }
+    }
+
+    function updateEffects(dt) {
+      particles = particles.filter(p => {
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 280 * dt;
+        return p.life > 0;
+      });
+      smoke = smoke.filter(s => {
+        s.life -= dt;
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.r += 18 * dt;
+        return s.life > 0;
+      });
+    }
+
+    function drawEffects() {
+      fx.clearRect(0, 0, W, H);
+      for (const s of smoke) {
+        const a = s.life / s.max;
+        fx.fillStyle = `rgba(85,85,85,${0.2 * a})`;
+        fx.beginPath(); fx.arc(s.x, s.y, s.r, 0, Math.PI * 2); fx.fill();
+      }
+      for (const p of particles) {
+        const a = p.life / p.max;
+        fx.fillStyle = `rgba(${p.color},${a})`;
+        fx.beginPath(); fx.arc(p.x, p.y, p.r, 0, Math.PI * 2); fx.fill();
+        fx.strokeStyle = `rgba(255,215,100,${a * 0.75})`;
+        fx.lineWidth = 1.4;
+        fx.beginPath(); fx.moveTo(p.x, p.y); fx.lineTo(p.x - p.vx * 0.025, p.y - p.vy * 0.025); fx.stroke();
+      }
+    }
+
+    function drawGame() {
+      ctx.clearRect(0, 0, W, H);
+      if (!path.length) return;
+
+      // steel plate under seam
+      const minY = Math.min(...path.map(p => p.y));
+      const maxY = Math.max(...path.map(p => p.y));
+      ctx.save();
+      const plateGrad = ctx.createLinearGradient(0, minY - 40, 0, maxY + 40);
+      plateGrad.addColorStop(0, '#b9c4c8');
+      plateGrad.addColorStop(1, '#65747a');
+      ctx.fillStyle = plateGrad;
+      ctx.strokeStyle = '#34444b';
+      ctx.lineWidth = 5;
+      drawRoundRect(ctx, 34, minY - 44, W - 68, maxY - minY + 88, 24, true, true);
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      ctx.fillRect(42, minY - 34, W - 84, 12);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.font = '900 11px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('SHIPYARD HULL SEAM • MARTIN FRANK INTERNATIONAL TRAINING', W / 2, minY - 18);
+      ctx.restore();
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // hot wire boundary: thick edge
+      ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 39; ctx.stroke();
+
+      ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.strokeStyle = '#516269'; ctx.lineWidth = 33; ctx.stroke();
+
+      // safe corridor
+      ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.strokeStyle = '#26383f'; ctx.lineWidth = 13; ctx.stroke();
+
+      // target centerline
+      ctx.setLineDash([7, 9]);
+      ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.strokeStyle = 'rgba(150,225,255,0.55)'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.setLineDash([]);
+
+      // welded progress
+      const end = clamp(progressIndex, 1, path.length - 1);
+      ctx.shadowBlur = 18; ctx.shadowColor = 'rgba(255,115,0,0.95)';
+      ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i <= end; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.strokeStyle = '#ff7c00'; ctx.lineWidth = 16; ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i <= end; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.strokeStyle = '#ffd35f'; ctx.lineWidth = 5; ctx.stroke();
+
+      ctx.restore();
+      drawMarker(path[0].x, path[0].y, '#17a9d1', 'START');
+      drawMarker(path[path.length - 1].x, path[path.length - 1].y, '#28d861', 'FINISH');
+    }
+
+    function drawMarker(x, y, color, label) {
+      ctx.save();
+      ctx.fillStyle = color; ctx.strokeStyle = '#10232b'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = '900 10px Arial'; ctx.textAlign = 'center'; ctx.fillText(label, x, y - 24);
+      ctx.restore();
+    }
+
+    function drawWelderAndTorch(bad, perfect) {
+      const x = torch.x;
+      const y = torch.y;
+      const machineX = Math.max(15, W * 0.06) + 105;
+      const machineY = H * 0.60 + 55;
+
+      ctx.save();
+      // cable
+      ctx.strokeStyle = '#101010'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(machineX, machineY);
+      ctx.bezierCurveTo(machineX + 80, machineY + 55, x - 120, y + 130, x - 9, y + 34);
+      ctx.stroke();
+
+      // glove/hand
+      ctx.fillStyle = '#5a3515'; ctx.strokeStyle = '#2a1608'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(x - 16, y + 30, 15, 10, -0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // welding torch body, not a point
+      ctx.translate(x, y);
+      ctx.rotate(torch.angle || 0.25);
+      ctx.fillStyle = '#202b30'; ctx.strokeStyle = '#0b1114'; ctx.lineWidth = 3;
+      drawRoundRect(ctx, -42, 18, 62, 16, 8, true, true);
+      ctx.fillStyle = '#0d6f8c'; drawRoundRect(ctx, -24, 5, 18, 40, 7, true, true);
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(18, 26); ctx.lineTo(38, 12); ctx.stroke();
+      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(42, 9, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // arc / loop
+      ctx.save();
+      ctx.lineWidth = bad ? 9 : 7;
+      ctx.strokeStyle = bad ? '#ff3737' : perfect ? '#fff6c1' : '#c8f5ff';
+      ctx.shadowBlur = bad ? 20 : perfect ? 18 : 8;
+      ctx.shadowColor = bad ? '#ff3030' : '#ffd52a';
+      ctx.beginPath(); ctx.arc(x, y, torch.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3; ctx.strokeStyle = bad ? '#fff' : '#42dcff';
+      ctx.beginPath(); ctx.arc(x, y, torch.r - 5, 0, Math.PI * 2); ctx.stroke();
+      if (pointerDown) {
+        const grad = ctx.createRadialGradient(x, y, 2, x, y, 38);
+        grad.addColorStop(0, 'rgba(255,255,255,1)');
+        grad.addColorStop(0.28, bad ? 'rgba(255,80,30,0.95)' : 'rgba(255,225,80,0.95)');
+        grad.addColorStop(1, 'rgba(255,120,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(x, y, bad ? 38 : 27, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function qualityNow(d, speed) {
+      if (d < 9 && speed < 260) return 100;
+      if (d < 14 && speed < 420) return 84;
+      if (d < 20 && speed < 650) return 58;
+      if (d < 26 && speed < 800) return 30;
+      return 5;
+    }
+
+    function updateSpeech(d, speed, bad, perfect) {
+      if (!pointerDown) {
+        speech.textContent = 'Touch and drag. The torch follows your finger. Start at START and move slowly down the seam.';
+      } else if (bad && speed > 700) {
+        speech.textContent = 'Too fast! In welding, control beats speed. Slow your hand.';
+      } else if (bad) {
+        speech.textContent = 'You hit the hot-wire edge. Keep the welding loop centered in the seam.';
+      } else if (perfect) {
+        speech.textContent = 'Perfect bead! Clean heat, clean path, professional weld.';
+      } else if (d < 20) {
+        speech.textContent = 'Good. Stay in the dark seam and guide the torch smoothly.';
+      } else {
+        speech.textContent = 'Re-center the torch. The ship hull needs one clean continuous weld.';
+      }
+    }
+
+    function updateUI() {
+      const progress = path.length ? Math.round(progressIndex / (path.length - 1) * 100) : 0;
+      const q = qualitySamples ? Math.round(qualityTotal / qualitySamples) : 100;
+      scoreText.textContent = score;
+      levelText.textContent = `${level}/${maxLevel}`;
+      progressText.textContent = `${progress}%`;
+      qualityText.textContent = `${q}%`;
+      livesText.textContent = lives;
+      comboText.textContent = `x${combo.toFixed(1)}`;
+      healthFill.style.transform = `scaleX(${health / 100})`;
+      healthText.textContent = `${Math.round(health)}%`;
+      heatNeedle.style.left = `${clamp(heat, 0, 100)}%`;
+      heatText.textContent = `${Math.round(heat)}%`;
+
+      if (!applicationUnlocked && score >= 2500) {
+        applicationUnlocked = true;
+        applyToast.classList.remove('hidden');
+        beep(880, 0.12, 0.05);
+        setTimeout(() => beep(1180, 0.16, 0.05), 130);
+        setTimeout(() => applyToast.classList.add('hidden'), 3600);
+        speech.textContent = 'Application unlocked! With this score, you should apply at Martin Frank International.';
+      }
+    }
+
+    function showBadFeedback() {
+      warning.classList.add('show');
+      document.body.classList.add('shake');
+      clearTimeout(showBadFeedback.t1);
+      clearTimeout(showBadFeedback.t2);
+      showBadFeedback.t1 = setTimeout(() => warning.classList.remove('show'), 180);
+      showBadFeedback.t2 = setTimeout(() => document.body.classList.remove('shake'), 130);
+    }
+
+    function loseLife() {
+      lives -= 1;
+      beep(120, 0.16, 0.06);
+      if (lives <= 0) return endGame(false);
+      makeLevel(level);
+      speech.textContent = 'Life lost. Resetting this level. Slow, centered, controlled.';
+    }
+
+    function nextLevel() {
+      score += 600 + level * 250 + Math.round(health * 4);
+      beep(740, 0.12, 0.04); setTimeout(() => beep(980, 0.12, 0.04), 120);
+      level += 1;
+      if (level > maxLevel) return endGame(true);
+      makeLevel(level);
+      speech.textContent = `Level ${level}. More curves, more pressure. Keep the torch steady.`;
+    }
+
+    function endGame(won) {
+      running = false;
+      pointerDown = false;
+      activePointerId = null;
+      setWeldSound(0, false);
+      const q = qualitySamples ? Math.round(qualityTotal / qualitySamples) : 0;
+      const applyLine = score >= 2500
+        ? '🔥 Your score is strong. You should apply at <b>Martin Frank International</b> for welding work in the Netherlands.'
+        : 'Reach <b>2500 points</b> to unlock the application message.';
+      endTitle.textContent = won ? 'Shipyard Job Complete!' : 'Game Over';
+      endText.innerHTML = `
+        Final score: <b>${score}</b><br>
+        Welding quality: <b>${q}%</b><br>
+        Level reached: <b>${Math.min(level, maxLevel)} / ${maxLevel}</b><br><br>
+        ${won ? 'Professional weld completed for <b>Martin Frank International</b>.' : 'Try again: drag slower, stay centered, and avoid the hot-wire edge.'}<br><br>
+        ${applyLine}
+      `;
+      lastFinalScoreText = `I scored ${score} points with ${q}% welding quality in Weld Loop Hero — Martin Frank International shipyard welding game.`;
+      endOverlay.classList.remove('hidden');
+    }
+
+    function gameLoop(now) {
+      const dt = Math.min(0.033, (now - lastTime) / 1000);
+      lastTime = now;
+
+      drawShipyard(dt);
+
+      if (running && path.length) {
+        torch.px = torch.x;
+        torch.py = torch.y;
+
+        if (pointerDown) {
+          torch.x += (pointerX - torch.x) * clamp(dt * 18, 0, 1);
+          torch.y += (pointerY - torch.y) * clamp(dt * 18, 0, 1);
+        }
+
+        torch.speed = dist(torch.x, torch.y, torch.px, torch.py) / Math.max(dt, 0.0001);
+        torch.angle = Math.atan2(torch.y - torch.py, torch.x - torch.px) * 0.25 + 0.25;
+
+        const near = nearestToPath(torch.x, torch.y);
+        if (near.i > progressIndex && pointerDown) progressIndex = near.i;
+
+        const edgeLimit = Math.max(15, 27 - level * 2.1);
+        const tooFast = torch.speed > Math.max(420, 760 - level * 70);
+        const bad = pointerDown && (near.d > edgeLimit || tooFast || near.i < progressIndex - 18);
+        const perfect = pointerDown && near.d < Math.max(5, 10 - level * 0.45) && torch.speed < Math.max(170, 270 - level * 12);
+        const good = pointerDown && near.d < Math.max(11, 19 - level * 0.8) && torch.speed < Math.max(330, 560 - level * 20);
+
+        if (pointerDown) {
+          fingerHint.classList.add('hidden');
+          hasTouchedOnce = true;
+          const q = qualityNow(near.d, torch.speed);
+          qualityTotal += q;
+          qualitySamples += 1;
+          heat = clamp(torch.speed / 8 + near.d * 2.1, 0, 100);
+
+          if (perfect) {
+            combo = clamp(combo + dt * 0.85, 1, 6);
+            score += Math.round((7 + level) * combo);
+            if (Math.random() < 0.75) spawnSpark(torch.x, torch.y, 4, false);
+          } else if (good) {
+            combo = clamp(combo + dt * 0.35, 1, 6);
+            score += Math.round((3 + level) * combo);
+            if (Math.random() < 0.35) spawnSpark(torch.x, torch.y, 3, false);
+          } else {
+            combo = Math.max(1, combo - dt * 1.2);
+          }
+
+          if (bad) {
+            sparkCooldown -= dt;
+            if (sparkCooldown <= 0) {
+              spawnSpark(torch.x, torch.y, 28, true);
+              showBadFeedback();
+              beep(70 + Math.random() * 40, 0.06, 0.025);
+              sparkCooldown = 0.08;
+            }
+            health -= (tooFast ? 34 + level * 3 : 24 + level * 2.2) * dt;
+            combo = 1;
+          }
+        } else {
+          heat = Math.max(0, heat - dt * 55);
+        }
+
+        setWeldSound(clamp(heat / 100, 0, 1), bad);
+        health = clamp(health, 0, 100);
+        updateSpeech(near.d, torch.speed, bad, perfect);
+        updateUI();
+
+        if (health <= 0) loseLife();
+        if (progressIndex >= path.length - 2) nextLevel();
+      } else {
+        setWeldSound(0, false);
+      }
+
+      drawGame();
+      const nearForDraw = path.length ? nearestToPath(torch.x, torch.y) : { d: 999 };
+      drawWelderAndTorch(pointerDown && (nearForDraw.d > 25 || torch.speed > 760), pointerDown && nearForDraw.d < 9 && torch.speed < 260);
+      updateEffects(dt);
+      drawEffects();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function getPointerPos(e) {
+      const rect = game.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function onPointerDown(e) {
+      if (!running) return;
+      e.preventDefault();
+      unlockAudio();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      activePointerId = e.pointerId;
+      game.setPointerCapture && game.setPointerCapture(e.pointerId);
+      const p = getPointerPos(e);
+      pointerX = p.x;
+      pointerY = p.y - FINGER_OFFSET_Y;
+      pointerDown = true;
+      fingerHint.classList.add('hidden');
+    }
+
+    function onPointerMove(e) {
+      if (!running) return;
+      if (activePointerId !== null && e.pointerId !== activePointerId) return;
+      e.preventDefault();
+      const p = getPointerPos(e);
+      pointerX = p.x;
+      pointerY = p.y - FINGER_OFFSET_Y;
+    }
+
+    function onPointerUp(e) {
+      if (activePointerId !== null && e.pointerId !== activePointerId) return;
+      e.preventDefault();
+      pointerDown = false;
+      activePointerId = null;
+      setWeldSound(0, false);
+    }
+
+    game.addEventListener('pointerdown', onPointerDown, { passive: false });
+    game.addEventListener('pointermove', onPointerMove, { passive: false });
+    game.addEventListener('pointerup', onPointerUp, { passive: false });
+    game.addEventListener('pointercancel', onPointerUp, { passive: false });
+    // Smartphone fix: do not block touchstart globally, because some phones then block the Start button.
+    // Only block touchmove while the game is actually running and the user is dragging the canvas.
+    game.addEventListener('touchmove', e => {
+      if (running && !startOverlay.contains(e.target) && !endOverlay.contains(e.target)) e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('contextmenu', e => e.preventDefault());
+
+    function startGame() {
+      unlockAudio();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      running = true;
+      level = 1;
+      lives = 3;
+      score = 0;
+      combo = 1;
+      particles = [];
+      smoke = [];
+      hasTouchedOnce = false;
+      applicationUnlocked = false;
+      applyToast.classList.add('hidden');
+      fingerHint.classList.remove('hidden');
+      startOverlay.classList.add('hidden');
+      endOverlay.classList.add('hidden');
+      makeLevel(level);
+      lastTime = performance.now();
+    }
+
+    function safeStart(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      startGame();
+    }
+
+    startBtn.addEventListener('click', safeStart);
+    startBtn.addEventListener('pointerup', safeStart);
+    startBtn.addEventListener('touchend', safeStart, { passive: false });
+    restartBtn.addEventListener('click', safeStart);
+    restartBtn.addEventListener('pointerup', safeStart);
+    restartBtn.addEventListener('touchend', safeStart, { passive: false });
+
+    shareBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = lastFinalScoreText || 'I played Weld Loop Hero — Martin Frank International welding game.';
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'Weld Loop Hero Score', text });
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(text);
+          shareBtn.textContent = 'Score Copied!';
+          setTimeout(() => shareBtn.textContent = 'Share Final Score', 1600);
+        } else {
+          alert(text);
+        }
+      } catch (err) {
+        // user cancelled share
+      }
+    });
+
+    resize();
+    setupBackgroundObjects();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
