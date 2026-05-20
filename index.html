@@ -441,7 +441,7 @@
 
     <div class="speech" id="speech">Touch anywhere on the game field. Drag the welding torch slowly through the seam like a hot-wire game.</div>
     <div class="warning" id="warning">CONTACT! SLOW DOWN!</div>
-    <div class="fingerHint" id="fingerHint">DRAG YOUR FINGER ON THE SHIPYARD SEAM</div>
+    <div class="fingerHint" id="fingerHint">PUT YOUR FINGER ON THE YELLOW CIRCLE — TORCH WELDS ABOVE IT</div>
 
     <div class="recruitAd" id="recruitAd">
       <div class="adFlash">⚡ WE ARE LOOKING FOR WELDERS IN THE NETHERLANDS ⚡</div>
@@ -933,7 +933,7 @@
       pointerX = torch.x;
       pointerY = torch.y + FINGER_OFFSET_Y;
 
-      speech.textContent = `Level ${n}: drag the torch through the shipyard seam. Slow and centered = strong weld.`;
+      speech.textContent = `Level ${n}: put your finger on the yellow circle. The torch welds above it, so you can see the seam.`;
       updateUI();
     }
 
@@ -1084,6 +1084,56 @@
       ctx.restore();
     }
 
+    function drawFingerGuide() {
+      if (!running || !path.length) return;
+
+      const fingerX = pointerDown ? pointerX : torch.x;
+      const fingerY = pointerDown ? pointerY + FINGER_OFFSET_Y : torch.y + FINGER_OFFSET_Y;
+      const torchX = pointerDown ? torch.x : path[0].x;
+      const torchY = pointerDown ? torch.y : path[0].y;
+
+      ctx.save();
+
+      // Connector line from real finger position to the welding torch point
+      ctx.setLineDash([7, 7]);
+      ctx.strokeStyle = 'rgba(255, 230, 90, 0.95)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(fingerX, fingerY);
+      ctx.lineTo(torchX, torchY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Big visible finger target ring
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = 'rgba(255, 230, 90, 0.95)';
+      ctx.fillStyle = 'rgba(255, 230, 90, 0.22)';
+      ctx.strokeStyle = '#ffe066';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(fingerX, fingerY, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Inner dot
+      ctx.fillStyle = '#10232b';
+      ctx.beginPath();
+      ctx.arc(fingerX, fingerY, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      ctx.font = '900 11px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#10232b';
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 4;
+      ctx.strokeText('FINGER HERE', fingerX, fingerY + 42);
+      ctx.fillText('FINGER HERE', fingerX, fingerY + 42);
+
+      ctx.restore();
+    }
+
     function drawWelderAndTorch(bad, perfect) {
       const x = torch.x;
       const y = torch.y;
@@ -1143,7 +1193,7 @@
 
     function updateSpeech(d, speed, bad, perfect) {
       if (!pointerDown) {
-        speech.textContent = 'Touch and drag. The torch follows your finger. Start at START and move slowly down the seam.';
+        speech.textContent = 'Put your finger on the yellow FINGER HERE circle. The torch welds above your finger so you can see the line.';
       } else if (bad && speed > 700) {
         speech.textContent = 'Too fast! In welding, control beats speed. Slow your hand.';
       } else if (bad) {
@@ -1303,6 +1353,7 @@
 
       drawGame();
       const nearForDraw = path.length ? nearestToPath(torch.x, torch.y) : { d: 999 };
+      drawFingerGuide();
       drawWelderAndTorch(pointerDown && (nearForDraw.d > 25 || torch.speed > 760), pointerDown && nearForDraw.d < 9 && torch.speed < 260);
       updateEffects(dt);
       drawEffects();
